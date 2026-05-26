@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Suksan Fongfon — Personal portfolio website" />
+  <title>Suksan Fongfon — Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-follower" id="cursor-follower"></div>
+
+  <div class="noise"></div>
+  <div class="gradient-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#home" class="logo">SF<span class="logo-dot">.</span></a>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#projects">Projects</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Menu">
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <main>
+    <section id="home" class="hero">
+      <div class="hero-content">
+        <div class="hero-tag reveal">
+          <span class="dot"></span>
+          Available for new projects
+        </div>
+        <h1 class="hero-title">
+          <span class="line reveal"><span>Hi, I'm</span></span>
+          <span class="line reveal"><span class="gradient-text">Suksan</span></span>
+          <span class="line reveal"><span class="gradient-text">Fongfon</span></span>
+        </h1>
+        <p class="hero-subtitle reveal">
+          A creative builder crafting digital experiences
+          that blend design, technology, and ideas.
+        </p>
+        <div class="hero-cta reveal">
+          <a href="#projects" class="btn btn-primary">
+            View my work
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M13 5l7 7-7 7"/>
+            </svg>
+          </a>
+          <a href="#contact" class="btn btn-ghost">Get in touch</a>
+        </div>
+      </div>
+      <div class="hero-scroll">
+        <span>Scroll</span>
+        <div class="scroll-line"></div>
+      </div>
+    </section>
+
+    <section id="about" class="about">
+      <div class="container">
+        <div class="section-label reveal">
+          <span>01</span>
+          About
+        </div>
+        <div class="about-grid">
+          <div class="about-text">
+            <h2 class="section-title reveal">
+              I design and build things
+              <span class="gradient-text">people love to use.</span>
+            </h2>
+            <div class="about-paragraphs reveal">
+              <p>
+                I'm a multidisciplinary creator passionate about
+                building products that feel as good as they look.
+                I blend design thinking with engineering to ship
+                ideas that solve real problems.
+              </p>
+              <p>
+                When I'm not building, you'll find me exploring
+                new technologies, sketching ideas, or chasing
+                inspiration in unexpected places.
+              </p>
+            </div>
+          </div>
+          <div class="about-side">
+            <div class="skill-card reveal">
+              <h3>Design</h3>
+              <ul>
+                <li>UI / UX Design</li>
+                <li>Brand Identity</li>
+                <li>Prototyping</li>
+              </ul>
+            </div>
+            <div class="skill-card reveal">
+              <h3>Development</h3>
+              <ul>
+                <li>Frontend Engineering</li>
+                <li>Web Apps</li>
+                <li>Interactive Experiences</li>
+              </ul>
+            </div>
+            <div class="skill-card reveal">
+              <h3>Tools</h3>
+              <ul>
+                <li>Figma · Framer</li>
+                <li>React · Next.js</li>
+                <li>Node · TypeScript</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects" class="projects">
+      <div class="container">
+        <div class="section-label reveal">
+          <span>02</span>
+          Selected Work
+        </div>
+        <h2 class="section-title reveal">
+          Recent <span class="gradient-text">projects</span>
+        </h2>
+
+        <div class="project-list">
+          <article class="project-card reveal" data-color="#7c3aed">
+            <div class="project-number">01</div>
+            <div class="project-info">
+              <span class="project-tag">Web App · 2025</span>
+              <h3 class="project-title">Aurora Dashboard</h3>
+              <p class="project-desc">
+                A real-time analytics platform with custom data
+                visualizations and an opinionated, fast UI.
+              </p>
+              <div class="project-stack">
+                <span>Next.js</span>
+                <span>D3</span>
+                <span>Tailwind</span>
+              </div>
+            </div>
+            <div class="project-arrow">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 17L17 7M7 7h10v10"/>
+              </svg>
+            </div>
+          </article>
+
+          <article class="project-card reveal" data-color="#ec4899">
+            <div class="project-number">02</div>
+            <div class="project-info">
+              <span class="project-tag">Brand · 2024</span>
+              <h3 class="project-title">Lumen Studio</h3>
+              <p class="project-desc">
+                Identity and digital presence for an emerging
+                creative studio. Logo system, type, and site.
+              </p>
+              <div class="project-stack">
+                <span>Brand</span>
+                <span>Figma</span>
+                <span>Webflow</span>
+              </div>
+            </div>
+            <div class="project-arrow">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 17L17 7M7 7h10v10"/>
+              </svg>
+            </div>
+          </article>
+
+          <article class="project-card reveal" data-color="#06b6d4">
+            <div class="project-number">03</div>
+            <div class="project-info">
+              <span class="project-tag">Product · 2024</span>
+              <h3 class="project-title">Pulse Mobile</h3>
+              <p class="project-desc">
+                A meditation companion app focused on micro-sessions
+                and gentle motion. Designed end-to-end.
+              </p>
+              <div class="project-stack">
+                <span>iOS</span>
+                <span>React Native</span>
+                <span>Motion</span>
+              </div>
+            </div>
+            <div class="project-arrow">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 17L17 7M7 7h10v10"/>
+              </svg>
+            </div>
+          </article>
+
+          <article class="project-card reveal" data-color="#f59e0b">
+            <div class="project-number">04</div>
+            <div class="project-info">
+              <span class="project-tag">Experiment · 2024</span>
+              <h3 class="project-title">Field Notes</h3>
+              <p class="project-desc">
+                A writing tool that turns rough thinking into
+                structured ideas using a calm, focused canvas.
+              </p>
+              <div class="project-stack">
+                <span>SvelteKit</span>
+                <span>TipTap</span>
+                <span>Supabase</span>
+              </div>
+            </div>
+            <div class="project-arrow">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 17L17 7M7 7h10v10"/>
+              </svg>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="contact">
+      <div class="container">
+        <div class="section-label reveal">
+          <span>03</span>
+          Contact
+        </div>
+        <h2 class="contact-title reveal">
+          Let's build
+          <span class="gradient-text">something great.</span>
+        </h2>
+        <p class="contact-sub reveal">
+          Got a project in mind, or just want to say hi?
+          My inbox is always open.
+        </p>
+        <a href="mailto:suksan.cmu@gmail.com" class="contact-email reveal">
+          suksan.cmu@gmail.com
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M13 5l7 7-7 7"/>
+          </svg>
+        </a>
+        <div class="social reveal">
+          <a href="#" target="_blank" rel="noopener">GitHub</a>
+          <span>·</span>
+          <a href="#" target="_blank" rel="noopener">LinkedIn</a>
+          <span>·</span>
+          <a href="#" target="_blank" rel="noopener">Twitter</a>
+          <span>·</span>
+          <a href="#" target="_blank" rel="noopener">Instagram</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> Suksan Fongfon</span>
+      <span>Crafted with care</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
