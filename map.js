@@ -722,96 +722,108 @@ function updateExportUI() {
 function togglePresent(on) { app.classList.toggle('present',on); if(on) selectCountry(null); }
 
 // ============================================================
-//  EXPORT HELPERS
+//  UNIFIED EXPORT FRAME RENDERER
+//  - Creates a projection fitted to exact export dimensions → no letterbox bars
+//  - Scales the current zoom transform proportionally
+//  - Clips to canvas bounds (fill-mode: map may slightly overflow extremes)
+//  - bgOverride: force a bg color (used for GIF which can't do partial alpha)
 // ============================================================
-function exportGeom() {
-  // Returns scale + offsets for letterbox rendering at target dims
-  const W=state.exportW, H=state.exportH;
-  const sc=Math.min(W/width, H/height);
-  return { W, H, sc, ox:Math.round((W-width*sc)/2), oy:Math.round((H-height*sc)/2) };
-}
+function renderExportFrame(ctx, ms, expW, expH, bgOverride) {
+  const bg = bgOverride ?? (state.bgColor === 'transparent' ? null : state.bgColor);
 
-function canvasFrameExport(ctx, ms, geom) {
-  const { W, H, sc, ox, oy } = geom;
-  ctx.clearRect(0, 0, W, H);
-  if (state.bgColor && state.bgColor !== 'transparent') {
-    ctx.fillStyle = state.bgColor; ctx.fillRect(0, 0, W, H);
-  }
+  ctx.clearRect(0, 0, expW, expH);
+  if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, expW, expH); }
+
+  // Projection refitted to export canvas → map fills exactly expW × expH
+  const expProj  = d3.geoNaturalEarth1().fitSize([expW, expH], { type: 'Sphere' });
+  const expPath  = d3.geoPath(expProj, ctx);
+  // Scale factor: how much coordinate space grew vs viewport projection
+  const sf       = expProj.scale() / projection.scale();
+
+  // Current zoom, translated into export coordinate space
+  const tr  = d3.zoomTransform(svgEl.node());
+  const etx = tr.x * sf, ety = tr.y * sf, ek = tr.k;
+
+  // Clip to canvas — map fills the frame; zoom-pan might show empty space at edges
   ctx.save();
-  ctx.translate(ox, oy);
-  // Temporarily call canvasFrame but with adjusted scale
-  // We abuse canvasFrame by faking the sc-only transform:
-  canvasFrameInner(ctx, ms, sc);
-  ctx.restore();
-}
+  ctx.beginPath(); ctx.rect(0, 0, expW, expH); ctx.clip();
+  ctx.translate(etx, ety); ctx.scale(ek, ek);
 
-function canvasFrameInner(ctx, ms, sc) {
-  ctx.save(); ctx.scale(sc, sc);
-  const tr=d3.zoomTransform(svgEl.node());
-  ctx.translate(tr.x,tr.y); ctx.scale(tr.k,tr.k);
-
-  const cp=d3.geoPath(projection,ctx);
-  countriesData.forEach(f=>{
-    ctx.beginPath(); cp(f);
-    ctx.fillStyle=state.countries[String(f.id)]?.color||state.countryColor;
-    ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=0.5/tr.k; ctx.stroke();
+  // ── Countries ──
+  countriesData.forEach(f => {
+    ctx.beginPath(); expPath(f);
+    ctx.fillStyle = state.countries[String(f.id)]?.color || state.countryColor;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 0.5/ek; ctx.stroke();
   });
 
-  if(state.showCountryNames){
+  // ── Country names ──
+  if (state.showCountryNames) {
     ctx.save();
-    ctx.font=`500 ${8/tr.k}px "Inter",sans-serif`;
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.strokeStyle='rgba(0,0,0,0.6)';
-    ctx.lineWidth=2/tr.k; ctx.textAlign='center'; ctx.textBaseline='middle';
-    countriesData.forEach(f=>{
-      if(geoPath.area(f)<800) return;
-      const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)) return;
-      const name=SHORT_NAME[f.properties.name]||f.properties.name;
-      ctx.strokeText(name,cx,cy); ctx.fillText(name,cx,cy);
+    ctx.font = `500 ${8/ek}px "Inter",sans-serif`;
+    ctx.fillStyle  = 'rgba(255,255,255,0.38)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+    ctx.lineWidth = 2.5/ek; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    countriesData.forEach(f => {
+      if (geoPath.area(f) < 800) return;   // use viewport projection for area check
+      const [cx, cy] = expPath.centroid(f); if (isNaN(cx)) return;
+      const name = SHORT_NAME[f.properties.name] || f.properties.name;
+      ctx.strokeText(name, cx, cy); ctx.fillText(name, cx, cy);
     });
     ctx.restore();
   }
 
-  const hubF=getF(state.hubId); let hx=null,hy=null;
-  if(hubF){[hx,hy]=geoPath.centroid(hubF);if(isNaN(hx)){hx=null;hy=null;}}
+  // ── Hub centroid ──
+  const hubF = getF(state.hubId); let hx = null, hy = null;
+  if (hubF) {
+    [hx, hy] = expPath.centroid(hubF);
+    if (isNaN(hx)) { hx = null; hy = null; }
+  }
 
-  if(state.showLines&&hx!==null){
-    Object.entries(state.countries).forEach(([id,info],idx)=>{
-      if(Number(id)===state.hubId) return;
-      const f=getF(id); if(!f) return;
-      const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
-      canvasArc(ctx,hx,hy,cx,cy,info.color,ms,idx);
+  // ── Arc lines ──
+  if (state.showLines && hx !== null) {
+    Object.entries(state.countries).forEach(([id, info], idx) => {
+      if (Number(id) === state.hubId) return;
+      const f = getF(id); if (!f) return;
+      const [cx, cy] = expPath.centroid(f); if (isNaN(cx) || isNaN(cy)) return;
+      canvasArc(ctx, hx, hy, cx, cy, info.color, ms, idx);
     });
   }
 
-  Object.entries(state.countries).forEach(([id,info])=>{
-    if(info.ringEnabled===false) return;
-    const f=getF(id); if(!f) return;
-    const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
-    const rc=ringColor(info.color);
-    [0,0.5].forEach(delay=>{
-      const phase=((ms/1800)+delay)%1, r=4+phase*20, op=(1-phase)*0.9;
-      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
-      ctx.strokeStyle=hexRgba(rc,op); ctx.lineWidth=(2-phase*1.5)/tr.k; ctx.stroke();
+  // ── Pulse rings ──
+  Object.entries(state.countries).forEach(([id, info]) => {
+    if (info.ringEnabled === false) return;
+    const f = getF(id); if (!f) return;
+    const [cx, cy] = expPath.centroid(f); if (isNaN(cx) || isNaN(cy)) return;
+    const rc = ringColor(info.color);
+    [0, 0.5].forEach(delay => {
+      const phase = ((ms/1800) + delay) % 1;
+      const r = 4 + phase*20, op = (1-phase)*0.9;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.strokeStyle = hexRgba(rc, op);
+      ctx.lineWidth = (2-phase*1.5)/ek; ctx.stroke();
     });
-    ctx.beginPath(); ctx.arc(cx,cy,3/tr.k,0,Math.PI*2);
-    ctx.fillStyle=ringColor(info.color); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, 3/ek, 0, Math.PI*2);
+    ctx.fillStyle = rc; ctx.fill();
   });
 
-  ctx.font=`600 12px "Space Grotesk","Inter",sans-serif`;
-  Object.entries(state.countries).forEach(([id,info])=>{
-    if(!info.label?.trim()) return;
-    const f=getF(id); if(!f) return;
-    const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
-    const off=info.labelOffset||{dx:0,dy:-30};
-    const lx=cx+off.dx, ly=cy+off.dy;
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(lx,ly);
-    ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1/tr.k;
-    ctx.setLineDash([3/tr.k,3/tr.k]); ctx.stroke(); ctx.setLineDash([]);
-    const tw=ctx.measureText(info.label).width,px=10,py=10;
-    ctx.fillStyle='rgba(16,16,22,.93)'; ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.lineWidth=1/tr.k;
-    rrect(ctx,lx-tw/2-px,ly-py,tw+px*2,py*2,5/tr.k); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#f1f1f3'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(info.label,lx,ly);
+  // ── Labels ──
+  ctx.font = `600 12px "Space Grotesk","Inter",sans-serif`;
+  Object.entries(state.countries).forEach(([id, info]) => {
+    if (!info.label?.trim()) return;
+    const f = getF(id); if (!f) return;
+    const [cx, cy] = expPath.centroid(f); if (isNaN(cx) || isNaN(cy)) return;
+    const off = info.labelOffset || {dx:0, dy:-30};
+    const lx = cx+off.dx, ly = cy+off.dy;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(lx, ly);
+    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1/ek;
+    ctx.setLineDash([3/ek, 3/ek]); ctx.stroke(); ctx.setLineDash([]);
+    const tw = ctx.measureText(info.label).width, px = 10, py = 10;
+    ctx.fillStyle = 'rgba(16,16,22,.93)'; ctx.strokeStyle = 'rgba(255,255,255,.15)';
+    ctx.lineWidth = 1/ek;
+    rrect(ctx, lx-tw/2-px, ly-py, tw+px*2, py*2, 5/ek); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f1f1f3'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(info.label, lx, ly);
   });
 
   ctx.restore();
@@ -822,11 +834,10 @@ function canvasFrameInner(ctx, ms, sc) {
 // ============================================================
 function exportPNG() {
   selectCountry(null);
-  const geom = exportGeom();
-  const cv = document.createElement('canvas');
-  cv.width = geom.W; cv.height = geom.H;
+  const { exportW: W, exportH: H } = state;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  canvasFrameExport(ctx, 0, geom);
+  renderExportFrame(ctx, 0, W, H);   // transparent bg → PNG alpha works
   cv.toBlob(b => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(b); a.download = `world-map-${Date.now()}.png`; a.click();
@@ -842,10 +853,11 @@ async function exportWebM() {
   if(btn.dataset.rec==='1') return;
   await document.fonts.ready;
   const DURATION=4000, FPS=30;
-  const geom=exportGeom();
-  const cv=document.createElement('canvas'); cv.width=geom.W; cv.height=geom.H;
+  const { exportW: W, exportH: H } = state;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   const ctx=cv.getContext('2d');
   const stream=cv.captureStream(FPS);
+  // VP9 supports alpha channel — transparent background works!
   const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
   if(!mime){alert('WebM not supported in this browser.');return;}
   const rec=new MediaRecorder(stream,{mimeType:mime}); const chunks=[];
@@ -863,7 +875,8 @@ async function exportWebM() {
   function frame(){
     const el=performance.now()-t0;
     if(el>=DURATION){clearInterval(tick);rec.stop();return;}
-    canvasFrameExport(ctx,el,geom); requestAnimationFrame(frame);
+    renderExportFrame(ctx,el,W,H); // transparent bg preserved in WebM/VP9
+    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }
@@ -890,21 +903,31 @@ async function exportGIF() {
     btn.dataset.rec='0'; btn.textContent='GIF (animation)'; return;
   }
 
-  const geom=exportGeom();
-  const FPS=12, FRAME_MS=Math.round(1000/FPS), FRAMES=36; // 3s loop
+  const { exportW: W, exportH: H } = state;
+  // GIF: 15fps, 2 full ring cycles (1.8s × 2 = 3.6s) → perfect seamless loop
+  const FPS=15, FRAME_MS=Math.round(1000/FPS), FRAMES=54;
+  // GIF doesn't support partial alpha — force solid bg even if user chose transparent
+  const gifBg = state.bgColor === 'transparent' ? '#0a0a0f' : state.bgColor;
 
-  const cv=document.createElement('canvas'); cv.width=geom.W; cv.height=geom.H;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
   const ctx=cv.getContext('2d');
 
-  const gif=new GIF({workers:2, quality:8, workerScript:workerUrl, width:geom.W, height:geom.H, repeat:0});
+  const gif=new GIF({
+    workers: 2,
+    quality: 1,          // 1 = best color quality (slowest), 10 = worst
+    dither: 'FloydSteinberg', // smooth dithering for gradients
+    workerScript: workerUrl,
+    width: W, height: H,
+    repeat: 0,           // loop forever
+  });
 
   // Render all frames
   for(let i=0;i<FRAMES;i++){
-    canvasFrameExport(ctx, i*FRAME_MS, geom);
+    renderExportFrame(ctx, i*FRAME_MS, W, H, gifBg);
     gif.addFrame(ctx, {copy:true, delay:FRAME_MS});
     const pct=Math.round((i+1)/FRAMES*65);
     btn.textContent=`Rendering ${pct}%`;
-    if(i%4===3) await new Promise(r=>setTimeout(r,0)); // yield to UI
+    if(i%5===4) await new Promise(r=>setTimeout(r,0)); // yield to UI
   }
 
   gif.on('progress', p => { btn.textContent=`Encoding ${Math.round(65+p*35)}%`; });
@@ -919,91 +942,6 @@ async function exportGIF() {
 
   btn.textContent='Encoding 65%';
   gif.render();
-}
-
-// ============================================================
-//  CANVAS FRAME RENDERER  (shared by WebM + GIF)
-// ============================================================
-function canvasFrame(ctx, ms, sc) {
-  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-  if(state.bgColor&&state.bgColor!=='transparent'){ctx.fillStyle=state.bgColor;ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);}
-  ctx.save(); ctx.scale(sc,sc);
-  const tr=d3.zoomTransform(svgEl.node());
-  ctx.translate(tr.x,tr.y); ctx.scale(tr.k,tr.k);
-
-  // Countries
-  const cp=d3.geoPath(projection,ctx);
-  countriesData.forEach(f=>{
-    ctx.beginPath(); cp(f);
-    ctx.fillStyle=state.countries[String(f.id)]?.color||state.countryColor;
-    ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=0.5/tr.k; ctx.stroke();
-  });
-
-  // Country names
-  if(state.showCountryNames){
-    ctx.save();
-    ctx.font=`500 ${8/tr.k}px "Inter",sans-serif`;
-    ctx.fillStyle='rgba(255,255,255,0.35)';
-    ctx.strokeStyle='rgba(0,0,0,0.6)';
-    ctx.lineWidth=2/tr.k;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    countriesData.forEach(f=>{
-      if(geoPath.area(f)<800) return;
-      const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)) return;
-      const name=SHORT_NAME[f.properties.name]||f.properties.name;
-      ctx.strokeText(name,cx,cy); ctx.fillText(name,cx,cy);
-    });
-    ctx.restore();
-  }
-
-  // Hub centroid
-  const hubF=getF(state.hubId); let hx=null,hy=null;
-  if(hubF){[hx,hy]=geoPath.centroid(hubF);if(isNaN(hx)){hx=null;hy=null;}}
-
-  // Arcs
-  if(state.showLines&&hx!==null){
-    Object.entries(state.countries).forEach(([id,info],idx)=>{
-      if(Number(id)===state.hubId) return;
-      const f=getF(id); if(!f) return;
-      const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
-      canvasArc(ctx,hx,hy,cx,cy,info.color,ms,idx);
-    });
-  }
-
-  // Rings
-  Object.entries(state.countries).forEach(([id,info])=>{
-    if(info.ringEnabled===false) return;
-    const f=getF(id); if(!f) return;
-    const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
-    const rc=ringColor(info.color);
-    [0,0.5].forEach(delay=>{
-      const phase=((ms/1800)+delay)%1, r=4+phase*20, op=(1-phase)*0.9;
-      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
-      ctx.strokeStyle=hexRgba(rc,op); ctx.lineWidth=(2-phase*1.5)/tr.k; ctx.stroke();
-    });
-    ctx.beginPath(); ctx.arc(cx,cy,3/tr.k,0,Math.PI*2);
-    ctx.fillStyle=rc; ctx.fill();
-  });
-
-  // Labels
-  ctx.font=`600 12px "Space Grotesk","Inter",sans-serif`;
-  Object.entries(state.countries).forEach(([id,info])=>{
-    if(!info.label?.trim()) return;
-    const f=getF(id); if(!f) return;
-    const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
-    const off=info.labelOffset||{dx:0,dy:-30};
-    const lx=cx+off.dx, ly=cy+off.dy;
-    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(lx,ly);
-    ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1/tr.k;
-    ctx.setLineDash([3/tr.k,3/tr.k]); ctx.stroke(); ctx.setLineDash([]);
-    const tw=ctx.measureText(info.label).width,px=10,py=10;
-    ctx.fillStyle='rgba(16,16,22,.93)'; ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.lineWidth=1/tr.k;
-    rrect(ctx,lx-tw/2-px,ly-py,tw+px*2,py*2,5/tr.k); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#f1f1f3'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(info.label,lx,ly);
-  });
-
-  ctx.restore();
 }
 
 function canvasArc(ctx,x1,y1,x2,y2,color,ms,idx){
