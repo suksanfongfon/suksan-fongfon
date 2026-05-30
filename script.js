@@ -96,3 +96,90 @@ document.querySelectorAll('.project-card').forEach((card) => {
     card.style.background = '';
   });
 });
+
+// ===== Weather + Holiday Widget =====
+(async () => {
+  const widget   = document.getElementById('weather-widget');
+  const holiday  = document.getElementById('ww-holiday');
+  if (!widget) return;
+
+  const CACHE_KEY = 'sf-wx-cache';
+  const CACHE_TTL = 30 * 60 * 1000; // 30 min
+
+  // WMO weather code → emoji + label
+  function wxInfo(code) {
+    if (code === 0)              return { icon: '☀️', desc: 'Clear sky' };
+    if (code <= 2)               return { icon: '🌤️', desc: 'Partly cloudy' };
+    if (code === 3)              return { icon: '☁️', desc: 'Overcast' };
+    if (code <= 48)              return { icon: '🌫️', desc: 'Foggy' };
+    if (code <= 57)              return { icon: '🌦️', desc: 'Drizzle' };
+    if (code <= 67)              return { icon: '🌧️', desc: 'Rain' };
+    if (code <= 77)              return { icon: '❄️',  desc: 'Snow' };
+    if (code <= 82)              return { icon: '🌦️', desc: 'Showers' };
+    if (code <= 86)              return { icon: '🌨️', desc: 'Snow showers' };
+    if (code >= 95)              return { icon: '⛈️', desc: 'Thunderstorm' };
+    return { icon: '🌡️', desc: 'Mixed' };
+  }
+
+  function render(d) {
+    document.getElementById('ww-icon').textContent = d.icon;
+    document.getElementById('ww-temp').textContent = `${d.temp}°C`;
+    document.getElementById('ww-desc').textContent = d.desc;
+    document.getElementById('ww-city').textContent = d.city;
+    if (d.holiday) {
+      document.getElementById('ww-hname').textContent = d.holiday;
+      holiday.hidden = false;
+    }
+    widget.hidden = false;
+  }
+
+  // Check session cache first
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (Date.now() - c.ts < CACHE_TTL) { render(c); return; }
+    }
+  } catch (_) {}
+
+  try {
+    // 1. Get rough location via IP (no permission needed)
+    let lat = 13.7563, lon = 100.5018, city = 'Bangkok', country = 'TH';
+    try {
+      const loc = await fetch('https://ipapi.co/json/').then(r => r.json());
+      if (loc.latitude) {
+        lat     = loc.latitude;
+        lon     = loc.longitude;
+        city    = loc.city || city;
+        country = loc.country_code || country;
+      }
+    } catch (_) { /* keep Bangkok defaults */ }
+
+    // 2. Weather from Open-Meteo (completely free, no API key)
+    const wx = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,weathercode&timezone=auto`
+    ).then(r => r.json());
+    const temp = Math.round(wx.current.temperature_2m);
+    const { icon, desc } = wxInfo(wx.current.weathercode);
+
+    // 3. Public holidays for today
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const year  = today.slice(0, 4);
+    let holidayName = null;
+    try {
+      const hols = await fetch(
+        `https://date.nager.at/api/v3/publicholidays/${year}/${country}`
+      ).then(r => r.json());
+      const found = Array.isArray(hols) && hols.find(h => h.date === today);
+      if (found) holidayName = found.localName || found.name;
+    } catch (_) {}
+
+    const data = { icon, temp, desc, city, holiday: holidayName, ts: Date.now() };
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (_) {}
+    render(data);
+
+  } catch (_) {
+    // silently skip widget if all APIs fail
+  }
+})();
