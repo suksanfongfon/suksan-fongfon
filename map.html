@@ -98,6 +98,21 @@
 
       <div class="divider"></div>
 
+      <!-- Country base color -->
+      <section class="panel">
+        <label class="panel-label">Country base color</label>
+        <div class="cc-presets">
+          <button class="cc-btn active" data-cc="#2a2a36">Dark</button>
+          <button class="cc-btn" data-cc="#1e3a5f">Navy</button>
+          <button class="cc-btn" data-cc="#374151">Grey</button>
+          <button class="cc-btn" data-cc="#14532d">Forest</button>
+          <button class="cc-btn" data-cc="#292524">Stone</button>
+        </div>
+        <input type="color" id="country-color" class="custom-color" value="#2a2a36" />
+      </section>
+
+      <div class="divider"></div>
+
       <!-- Arc lines -->
       <section class="panel">
         <label class="panel-label">Arc lines — origin</label>
@@ -110,11 +125,19 @@
           <span class="switch"><input type="checkbox" id="lines-toggle" checked /><span class="slider"></span></span>
         </label>
         <div class="speed-block">
-          <label class="panel-label" style="margin-bottom:4px">Arc speed — <span id="arc-speed-val">1.0×</span></label>
+          <label class="panel-label" style="margin-bottom:4px">Speed — <span id="arc-speed-val">1.0×</span></label>
           <div class="speed-row">
             <span class="speed-lbl">Slow</span>
             <input type="range" id="arc-speed" class="range-input" min="0.3" max="3" step="0.1" value="1" />
             <span class="speed-lbl">Fast</span>
+          </div>
+        </div>
+        <div class="ring-mode-row">
+          <span class="ring-mode-lbl">Arc color</span>
+          <div class="seg-ctrl">
+            <button class="arc-seg active" data-amode="lighter">Lighter</button>
+            <button class="arc-seg" data-amode="match">Match</button>
+            <button class="arc-seg" data-amode="darker">Darker</button>
           </div>
         </div>
       </section>
@@ -173,13 +196,32 @@
 
       <div class="divider"></div>
 
+      <!-- Export size -->
+      <section class="panel">
+        <label class="panel-label">Export size</label>
+        <div class="size-presets">
+          <button class="size-btn active" data-preset="slides">Slides 1280×720</button>
+          <button class="size-btn" data-preset="hd">HD 1920×1080</button>
+          <button class="size-btn" data-preset="4k">4K 3840×2160</button>
+          <button class="size-btn" data-preset="square">Square 1080×1080</button>
+          <button class="size-btn" data-preset="custom">Custom…</button>
+        </div>
+        <div class="custom-size-row" id="custom-size-row" hidden>
+          <input type="number" id="exp-w" class="size-num" value="1280" min="400" max="4000" />
+          <span class="size-x">×</span>
+          <input type="number" id="exp-h" class="size-num" value="720" min="300" max="4000" />
+          <span class="speed-lbl">px</span>
+        </div>
+        <p class="panel-hint" id="size-hint">Output: 1280 × 720 px</p>
+      </section>
+
       <!-- Export -->
       <section class="panel">
         <label class="panel-label">Export</label>
         <button class="btn grow" id="export-png">PNG (static)</button>
         <button class="btn grow accent-webm" id="export-animation">WebM (animation)</button>
         <button class="btn grow accent-gif" id="export-gif">GIF (animation)</button>
-        <p class="panel-hint">GIF = ~3s loop, 15fps. May take a moment to encode.</p>
+        <p class="panel-hint">GIF = 3s loop, 12fps. Encoding may take ~10s.</p>
       </section>
 
       <a href="index.html" class="back-link">← Portfolio</a>

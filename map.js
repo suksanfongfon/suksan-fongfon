@@ -22,19 +22,31 @@ const SHORT_NAME = {
   'Solomon Islands':                'Solomon Is.',
 };
 
+const EXPORT_PRESETS = {
+  slides: { w:1280, h:720  },
+  hd:     { w:1920, h:1080 },
+  '4k':   { w:3840, h:2160 },
+  square: { w:1080, h:1080 },
+};
+
 // ---- State ----
 const state = {
-  countries:       {},   // { [id:string]: { name, color, label, ringEnabled, labelOffset } }
+  countries:       {},
   selectedId:      null,
   hubId:           THAILAND_ID,
   hubName:         'Thailand',
   currentColor:    '#a855f7',
+  countryColor:    '#2a2a36',   // base fill for unmarked countries
   ringEnabled:     true,
-  ringColorMode:   'lighter',  // 'lighter' | 'match' | 'darker'
+  ringColorMode:   'lighter',
+  arcColorMode:    'lighter',   // 'lighter' | 'match' | 'darker'
   showLines:       true,
-  arcSpeed:        1,           // 0.3 – 3
+  arcSpeed:        1,
   showCountryNames:true,
   bgColor:         '#0a0a0f',
+  exportPreset:    'slides',
+  exportW:         1280,
+  exportH:         720,
 };
 
 // ---- DOM ----
@@ -102,6 +114,9 @@ function syncUI() {
   hubEl.textContent      = state.hubName;
   updateBgUI(state.bgColor);
   updateRingModeUI(state.ringColorMode);
+  updateArcModeUI(state.arcColorMode);
+  updateCountryColorUI(state.countryColor);
+  updateExportUI();
   applySwatchActive();
 }
 
@@ -161,7 +176,7 @@ async function renderMap() {
     .attr('class', 'country')
     .attr('d', geoPath)
     .attr('data-id', d => d.id)
-    .style('fill', d => state.countries[String(d.id)]?.color || null)
+    .style('fill', d => state.countries[String(d.id)]?.color || state.countryColor)
     .on('click', onCountryClick)
     .append('title').text(d => d.properties.name);
 
@@ -242,13 +257,43 @@ function bindUI() {
     });
   });
 
-  // Lines + speed
+  // Lines + speed + arc color mode
   linesToggle.addEventListener('change', e => { state.showLines = e.target.checked; saveState(); redrawOverlays(); });
   arcSpeedEl.addEventListener('input', e => {
     state.arcSpeed = parseFloat(e.target.value);
     arcSpeedVal.textContent = `${state.arcSpeed.toFixed(1)}×`;
     saveState(); redrawOverlays();
   });
+  document.querySelectorAll('.arc-seg').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.arcColorMode = btn.dataset.amode;
+      updateArcModeUI(state.arcColorMode);
+      saveState(); redrawOverlays();
+    });
+  });
+
+  // Country base color
+  document.querySelectorAll('.cc-btn').forEach(btn => {
+    btn.addEventListener('click', () => updateCountryColor(btn.dataset.cc));
+  });
+  const ccInput = document.getElementById('country-color');
+  if (ccInput) ccInput.addEventListener('input', e => updateCountryColor(e.target.value));
+
+  // Export size presets
+  document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.exportPreset = btn.dataset.preset;
+      if (btn.dataset.preset !== 'custom') {
+        const p = EXPORT_PRESETS[btn.dataset.preset];
+        state.exportW = p.w; state.exportH = p.h;
+      }
+      updateExportUI(); saveState();
+    });
+  });
+  const expW = document.getElementById('exp-w');
+  const expH = document.getElementById('exp-h');
+  if (expW) expW.addEventListener('input', e => { state.exportW = parseInt(e.target.value)||1280; updateExportUI(); saveState(); });
+  if (expH) expH.addEventListener('input', e => { state.exportH = parseInt(e.target.value)||720;  updateExportUI(); saveState(); });
 
   // Hub
   setHubBtn.addEventListener('click', () => {
@@ -531,6 +576,13 @@ function hslToHex(h,s,l) {
   return '#'+[r,g,b].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');
 }
 
+function arcLineColor(fillColor) {
+  if (state.arcColorMode === 'match') return fillColor;
+  const [h, s, l] = hexToHsl(fillColor);
+  if (state.arcColorMode === 'lighter') return hslToHex(h, Math.max(0, s-15), Math.min(92, l+35));
+  return hslToHex(h, Math.min(100, s+10), Math.max(8, l-28));
+}
+
 // ============================================================
 //  ARC LINES
 // ============================================================
@@ -540,16 +592,17 @@ function arcCP(x1,y1,x2,y2) {
 }
 
 function drawArcSVG(x1,y1,x2,y2,color) {
+  const ac = arcLineColor(color);
   const {cpx,cpy} = arcCP(x1,y1,x2,y2);
   const d  = `M ${x1} ${y1} Q ${cpx} ${cpy} ${x2} ${y2}`;
   const id = `arc${arcCounter++}`;
 
   gOverlays.append('path').attr('class','arc-trail')
-    .attr('d',d).attr('stroke',color).attr('fill','none')
-    .attr('stroke-width',1.5).attr('stroke-opacity',0.18);
+    .attr('d',d).attr('stroke',ac).attr('fill','none')
+    .attr('stroke-width',1.5).attr('stroke-opacity',0.22);
 
   const beam = gOverlays.append('path').attr('class','arc-beam')
-    .attr('id',id).attr('d',d).attr('stroke',color).attr('fill','none')
+    .attr('id',id).attr('d',d).attr('stroke',ac).attr('fill','none')
     .attr('stroke-width',2.5);
 
   const L   = beam.node().getTotalLength();
@@ -559,7 +612,7 @@ function drawArcSVG(x1,y1,x2,y2,color) {
   const style = document.createElement('style');
   style.textContent=`
     #${id}{stroke-dasharray:${seg} ${L};stroke-dashoffset:${L+seg};
-           filter:drop-shadow(0 0 5px ${color});
+           filter:drop-shadow(0 0 5px ${ac});
            animation:bm_${id} ${dur}s linear infinite;}
     @keyframes bm_${id}{0%{stroke-dashoffset:${L+seg};}100%{stroke-dashoffset:${-seg};}}
   `;
@@ -634,32 +687,151 @@ function updateBgUI(color) {
   if(color!=='transparent') bgColorInput.value=color;
 }
 
+function updateCountryColor(color) {
+  state.countryColor = color;
+  // Apply to all unmarked country paths
+  gCountries.selectAll('path').each(function(d) {
+    if (!state.countries[String(d.id)]) d3.select(this).style('fill', color);
+  });
+  updateCountryColorUI(color);
+  saveState();
+}
+function updateCountryColorUI(color) {
+  document.querySelectorAll('.cc-btn').forEach(b => b.classList.toggle('active', b.dataset.cc === color));
+  const el = document.getElementById('country-color');
+  if (el) el.value = color;
+}
+
+function updateArcModeUI(mode) {
+  document.querySelectorAll('.arc-seg').forEach(b => b.classList.toggle('active', b.dataset.amode === mode));
+}
+
+function updateExportUI() {
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.toggle('active', b.dataset.preset === state.exportPreset));
+  const customRow = document.getElementById('custom-size-row');
+  if (customRow) customRow.hidden = state.exportPreset !== 'custom';
+  const hint = document.getElementById('size-hint');
+  if (hint) hint.textContent = `Output: ${state.exportW} × ${state.exportH} px`;
+  const expW = document.getElementById('exp-w'); if (expW) expW.value = state.exportW;
+  const expH = document.getElementById('exp-h'); if (expH) expH.value = state.exportH;
+}
+
 // ============================================================
 //  PRESENT MODE
 // ============================================================
 function togglePresent(on) { app.classList.toggle('present',on); if(on) selectCountry(null); }
 
 // ============================================================
+//  EXPORT HELPERS
+// ============================================================
+function exportGeom() {
+  // Returns scale + offsets for letterbox rendering at target dims
+  const W=state.exportW, H=state.exportH;
+  const sc=Math.min(W/width, H/height);
+  return { W, H, sc, ox:Math.round((W-width*sc)/2), oy:Math.round((H-height*sc)/2) };
+}
+
+function canvasFrameExport(ctx, ms, geom) {
+  const { W, H, sc, ox, oy } = geom;
+  ctx.clearRect(0, 0, W, H);
+  if (state.bgColor && state.bgColor !== 'transparent') {
+    ctx.fillStyle = state.bgColor; ctx.fillRect(0, 0, W, H);
+  }
+  ctx.save();
+  ctx.translate(ox, oy);
+  // Temporarily call canvasFrame but with adjusted scale
+  // We abuse canvasFrame by faking the sc-only transform:
+  canvasFrameInner(ctx, ms, sc);
+  ctx.restore();
+}
+
+function canvasFrameInner(ctx, ms, sc) {
+  ctx.save(); ctx.scale(sc, sc);
+  const tr=d3.zoomTransform(svgEl.node());
+  ctx.translate(tr.x,tr.y); ctx.scale(tr.k,tr.k);
+
+  const cp=d3.geoPath(projection,ctx);
+  countriesData.forEach(f=>{
+    ctx.beginPath(); cp(f);
+    ctx.fillStyle=state.countries[String(f.id)]?.color||state.countryColor;
+    ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=0.5/tr.k; ctx.stroke();
+  });
+
+  if(state.showCountryNames){
+    ctx.save();
+    ctx.font=`500 ${8/tr.k}px "Inter",sans-serif`;
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.strokeStyle='rgba(0,0,0,0.6)';
+    ctx.lineWidth=2/tr.k; ctx.textAlign='center'; ctx.textBaseline='middle';
+    countriesData.forEach(f=>{
+      if(geoPath.area(f)<800) return;
+      const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)) return;
+      const name=SHORT_NAME[f.properties.name]||f.properties.name;
+      ctx.strokeText(name,cx,cy); ctx.fillText(name,cx,cy);
+    });
+    ctx.restore();
+  }
+
+  const hubF=getF(state.hubId); let hx=null,hy=null;
+  if(hubF){[hx,hy]=geoPath.centroid(hubF);if(isNaN(hx)){hx=null;hy=null;}}
+
+  if(state.showLines&&hx!==null){
+    Object.entries(state.countries).forEach(([id,info],idx)=>{
+      if(Number(id)===state.hubId) return;
+      const f=getF(id); if(!f) return;
+      const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
+      canvasArc(ctx,hx,hy,cx,cy,info.color,ms,idx);
+    });
+  }
+
+  Object.entries(state.countries).forEach(([id,info])=>{
+    if(info.ringEnabled===false) return;
+    const f=getF(id); if(!f) return;
+    const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
+    const rc=ringColor(info.color);
+    [0,0.5].forEach(delay=>{
+      const phase=((ms/1800)+delay)%1, r=4+phase*20, op=(1-phase)*0.9;
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.strokeStyle=hexRgba(rc,op); ctx.lineWidth=(2-phase*1.5)/tr.k; ctx.stroke();
+    });
+    ctx.beginPath(); ctx.arc(cx,cy,3/tr.k,0,Math.PI*2);
+    ctx.fillStyle=ringColor(info.color); ctx.fill();
+  });
+
+  ctx.font=`600 12px "Space Grotesk","Inter",sans-serif`;
+  Object.entries(state.countries).forEach(([id,info])=>{
+    if(!info.label?.trim()) return;
+    const f=getF(id); if(!f) return;
+    const [cx,cy]=geoPath.centroid(f); if(isNaN(cx)||isNaN(cy)) return;
+    const off=info.labelOffset||{dx:0,dy:-30};
+    const lx=cx+off.dx, ly=cy+off.dy;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(lx,ly);
+    ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1/tr.k;
+    ctx.setLineDash([3/tr.k,3/tr.k]); ctx.stroke(); ctx.setLineDash([]);
+    const tw=ctx.measureText(info.label).width,px=10,py=10;
+    ctx.fillStyle='rgba(16,16,22,.93)'; ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.lineWidth=1/tr.k;
+    rrect(ctx,lx-tw/2-px,ly-py,tw+px*2,py*2,5/tr.k); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#f1f1f3'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(info.label,lx,ly);
+  });
+
+  ctx.restore();
+}
+
+// ============================================================
 //  EXPORT — PNG
 // ============================================================
 function exportPNG() {
   selectCountry(null);
-  const node=svgEl.node().cloneNode(true);
-  node.setAttribute('xmlns','http://www.w3.org/2000/svg');
-  const style=document.createElementNS('http://www.w3.org/2000/svg','style');
-  style.textContent=`.country{stroke:rgba(0,0,0,.55);stroke-width:.5;}.ring{fill:none;opacity:.9;stroke-width:1.5;}.label-bg{fill:rgba(16,16,22,.93);stroke:rgba(255,255,255,.15);}.label-text{fill:#f1f1f3;font-family:sans-serif;font-size:12px;font-weight:600;}.leader-line{stroke:rgba(255,255,255,.35);stroke-width:1;stroke-dasharray:3 3;}.arc-beam{stroke-dashoffset:0;}.country-name{font-size:8px;fill:rgba(255,255,255,.38);}`;
-  node.insertBefore(style,node.firstChild);
-  const xml=new XMLSerializer().serializeToString(node);
-  const url=URL.createObjectURL(new Blob([xml],{type:'image/svg+xml;charset=utf-8'}));
-  const img=new Image();
-  img.onload=()=>{
-    const sc=2, cv=document.createElement('canvas'); cv.width=width*sc; cv.height=height*sc;
-    const ctx=cv.getContext('2d');
-    if(state.bgColor!=='transparent'){ctx.fillStyle=state.bgColor;ctx.fillRect(0,0,cv.width,cv.height);}
-    ctx.drawImage(img,0,0,cv.width,cv.height); URL.revokeObjectURL(url);
-    cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`world-map-${Date.now()}.png`;a.click();},'image/png');
-  };
-  img.src=url;
+  const geom = exportGeom();
+  const cv = document.createElement('canvas');
+  cv.width = geom.W; cv.height = geom.H;
+  const ctx = cv.getContext('2d');
+  canvasFrameExport(ctx, 0, geom);
+  cv.toBlob(b => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = `world-map-${Date.now()}.png`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  }, 'image/png');
 }
 
 // ============================================================
@@ -669,8 +841,9 @@ async function exportWebM() {
   const btn=$('export-animation');
   if(btn.dataset.rec==='1') return;
   await document.fonts.ready;
-  const DURATION=4000, FPS=30, sc=2;
-  const cv=document.createElement('canvas'); cv.width=width*sc; cv.height=height*sc;
+  const DURATION=4000, FPS=30;
+  const geom=exportGeom();
+  const cv=document.createElement('canvas'); cv.width=geom.W; cv.height=geom.H;
   const ctx=cv.getContext('2d');
   const stream=cv.captureStream(FPS);
   const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
@@ -690,7 +863,7 @@ async function exportWebM() {
   function frame(){
     const el=performance.now()-t0;
     if(el>=DURATION){clearInterval(tick);rec.stop();return;}
-    canvasFrame(ctx,el,sc); requestAnimationFrame(frame);
+    canvasFrameExport(ctx,el,geom); requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }
@@ -717,18 +890,17 @@ async function exportGIF() {
     btn.dataset.rec='0'; btn.textContent='GIF (animation)'; return;
   }
 
-  const sc=0.75;
-  const W=Math.round(width*sc), H=Math.round(height*sc);
+  const geom=exportGeom();
   const FPS=12, FRAME_MS=Math.round(1000/FPS), FRAMES=36; // 3s loop
 
-  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const cv=document.createElement('canvas'); cv.width=geom.W; cv.height=geom.H;
   const ctx=cv.getContext('2d');
 
-  const gif=new GIF({workers:2, quality:8, workerScript:workerUrl, width:W, height:H, repeat:0});
+  const gif=new GIF({workers:2, quality:8, workerScript:workerUrl, width:geom.W, height:geom.H, repeat:0});
 
   // Render all frames
   for(let i=0;i<FRAMES;i++){
-    canvasFrame(ctx, i*FRAME_MS, sc);
+    canvasFrameExport(ctx, i*FRAME_MS, geom);
     gif.addFrame(ctx, {copy:true, delay:FRAME_MS});
     const pct=Math.round((i+1)/FRAMES*65);
     btn.textContent=`Rendering ${pct}%`;
@@ -763,7 +935,7 @@ function canvasFrame(ctx, ms, sc) {
   const cp=d3.geoPath(projection,ctx);
   countriesData.forEach(f=>{
     ctx.beginPath(); cp(f);
-    ctx.fillStyle=state.countries[String(f.id)]?.color||'#2a2a36';
+    ctx.fillStyle=state.countries[String(f.id)]?.color||state.countryColor;
     ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=0.5/tr.k; ctx.stroke();
   });
 
@@ -835,13 +1007,14 @@ function canvasFrame(ctx, ms, sc) {
 }
 
 function canvasArc(ctx,x1,y1,x2,y2,color,ms,idx){
+  const ac=arcLineColor(color);
   const {cpx,cpy}=arcCP(x1,y1,x2,y2);
   // Trail
   ctx.beginPath(); ctx.moveTo(x1,y1); ctx.quadraticCurveTo(cpx,cpy,x2,y2);
-  ctx.strokeStyle=hexRgba(color,.18); ctx.lineWidth=1.5; ctx.setLineDash([]); ctx.stroke();
+  ctx.strokeStyle=hexRgba(ac,.22); ctx.lineWidth=1.5; ctx.setLineDash([]); ctx.stroke();
   // Beam
   const DUR=1800/state.arcSpeed, phase=((ms+(idx*600))%DUR)/DUR, seg=0.25, t1=phase+seg;
-  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.shadowColor=color; ctx.shadowBlur=10;
+  ctx.save(); ctx.strokeStyle=ac; ctx.lineWidth=2.5; ctx.shadowColor=ac; ctx.shadowBlur=10;
   const N=28;
   const drawSeg=(a,b)=>{
     ctx.beginPath();
