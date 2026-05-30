@@ -6,93 +6,158 @@
   <title>World Map — Presentation Tool</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="map.css" />
 </head>
 <body>
   <div id="app">
 
     <!-- ===== Toolbar ===== -->
-    <aside class="toolbar">
+    <aside class="toolbar" id="toolbar">
+
       <div class="toolbar-header">
-        <h1>World Map</h1>
-        <p class="toolbar-sub">Click a country to mark it</p>
+        <h1>World Map<span class="logo-dot">.</span></h1>
+        <p class="toolbar-sub">Interactive Presentation Tool</p>
       </div>
+
+      <!-- Country Search -->
+      <section class="panel">
+        <label class="panel-label">Search country</label>
+        <div class="search-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input type="search" id="country-search" class="search-input" placeholder="Type a country name…" autocomplete="off" />
+        </div>
+        <div class="search-results" id="search-results" hidden></div>
+      </section>
+
+      <div class="divider"></div>
 
       <!-- Selected -->
       <section class="panel">
-        <label class="panel-label">Selected country</label>
+        <label class="panel-label">Selected</label>
         <div class="selected-country" id="selected-country">— none —</div>
       </section>
 
-      <!-- Label text -->
+      <!-- Label -->
       <section class="panel">
         <label class="panel-label">Label text</label>
-        <input type="text" id="label-input" class="text-input"
-               placeholder="Type a label…" maxlength="60" disabled />
-        <p class="panel-hint">Double-click a label on the map to edit directly.</p>
+        <input type="text" id="label-input" class="text-input" placeholder="Type a label…" maxlength="60" disabled />
+        <p class="panel-hint">Double-click a label on the map to edit.</p>
       </section>
 
-      <!-- Fill color -->
+      <div class="divider"></div>
+
+      <!-- Fill color — 20 swatches -->
       <section class="panel">
         <label class="panel-label">Fill color</label>
         <div class="color-grid" id="color-grid">
-          <button class="color-swatch" data-color="#a855f7" style="--c:#a855f7"></button>
-          <button class="color-swatch" data-color="#ec4899" style="--c:#ec4899"></button>
-          <button class="color-swatch" data-color="#06b6d4" style="--c:#06b6d4"></button>
-          <button class="color-swatch" data-color="#f59e0b" style="--c:#f59e0b"></button>
-          <button class="color-swatch" data-color="#4ade80" style="--c:#4ade80"></button>
-          <button class="color-swatch" data-color="#3b82f6" style="--c:#3b82f6"></button>
-          <button class="color-swatch" data-color="#ef4444" style="--c:#ef4444"></button>
-          <button class="color-swatch" data-color="#ffffff" style="--c:#ffffff"></button>
+          <!-- Row 1: purples / pinks -->
+          <button class="color-swatch" data-color="#a855f7" style="--c:#a855f7" title="#a855f7"></button>
+          <button class="color-swatch" data-color="#c084fc" style="--c:#c084fc" title="#c084fc"></button>
+          <button class="color-swatch" data-color="#7c3aed" style="--c:#7c3aed" title="#7c3aed"></button>
+          <button class="color-swatch" data-color="#ec4899" style="--c:#ec4899" title="#ec4899"></button>
+          <button class="color-swatch" data-color="#f472b6" style="--c:#f472b6" title="#f472b6"></button>
+          <!-- Row 2: reds / warm -->
+          <button class="color-swatch" data-color="#ef4444" style="--c:#ef4444" title="#ef4444"></button>
+          <button class="color-swatch" data-color="#f97316" style="--c:#f97316" title="#f97316"></button>
+          <button class="color-swatch" data-color="#f59e0b" style="--c:#f59e0b" title="#f59e0b"></button>
+          <button class="color-swatch" data-color="#eab308" style="--c:#eab308" title="#eab308"></button>
+          <button class="color-swatch" data-color="#84cc16" style="--c:#84cc16" title="#84cc16"></button>
+          <!-- Row 3: greens / blues -->
+          <button class="color-swatch" data-color="#22c55e" style="--c:#22c55e" title="#22c55e"></button>
+          <button class="color-swatch" data-color="#10b981" style="--c:#10b981" title="#10b981"></button>
+          <button class="color-swatch" data-color="#06b6d4" style="--c:#06b6d4" title="#06b6d4"></button>
+          <button class="color-swatch" data-color="#0ea5e9" style="--c:#0ea5e9" title="#0ea5e9"></button>
+          <button class="color-swatch" data-color="#3b82f6" style="--c:#3b82f6" title="#3b82f6"></button>
+          <!-- Row 4: indigo / neutrals -->
+          <button class="color-swatch" data-color="#6366f1" style="--c:#6366f1" title="#6366f1"></button>
+          <button class="color-swatch" data-color="#8b5cf6" style="--c:#8b5cf6" title="#8b5cf6"></button>
+          <button class="color-swatch" data-color="#e2e8f0" style="--c:#e2e8f0" title="#e2e8f0"></button>
+          <button class="color-swatch" data-color="#94a3b8" style="--c:#94a3b8" title="#94a3b8"></button>
+          <button class="color-swatch" data-color="#ffffff" style="--c:#ffffff" title="#ffffff"></button>
         </div>
         <input type="color" id="custom-color" class="custom-color" value="#a855f7" />
       </section>
 
-      <!-- Background color -->
+      <div class="divider"></div>
+
+      <!-- Background -->
       <section class="panel">
-        <label class="panel-label">Map background</label>
+        <label class="panel-label">Background</label>
         <div class="bg-options">
           <button class="bg-btn active" data-bg="#0a0a0f">Dark</button>
           <button class="bg-btn" data-bg="#0d1b2a">Navy</button>
-          <button class="bg-btn" data-bg="#1a1a1a">Charcoal</button>
-          <button class="bg-btn" data-bg="#f0f0f0">Light</button>
+          <button class="bg-btn" data-bg="#1c1c1c">Charcoal</button>
+          <button class="bg-btn" data-bg="#f0f2f5">Light</button>
           <button class="bg-btn transparent-btn" data-bg="transparent">Transparent</button>
         </div>
         <input type="color" id="bg-color" class="custom-color" value="#0a0a0f" />
       </section>
 
+      <div class="divider"></div>
+
       <!-- Arc lines -->
       <section class="panel">
-        <label class="panel-label">Arc lines — origin country</label>
+        <label class="panel-label">Arc lines — origin</label>
         <div class="hub-row">
-          <div class="selected-country hub-display" id="hub-country">Thailand</div>
-          <button class="btn small" id="set-hub" disabled title="Set selected country as arc origin">Set hub</button>
+          <div class="hub-display" id="hub-country">Thailand</div>
+          <button class="btn small" id="set-hub" disabled>Set hub</button>
         </div>
-        <label class="panel-label switch-row" style="margin-top:6px">
-          <span>Show arc lines</span>
-          <span class="switch">
-            <input type="checkbox" id="lines-toggle" checked />
-            <span class="slider"></span>
-          </span>
+        <label class="switch-row">
+          <span>Show arcs</span>
+          <span class="switch"><input type="checkbox" id="lines-toggle" checked /><span class="slider"></span></span>
         </label>
+        <div class="speed-block">
+          <label class="panel-label" style="margin-bottom:4px">Arc speed — <span id="arc-speed-val">1.0×</span></label>
+          <div class="speed-row">
+            <span class="speed-lbl">Slow</span>
+            <input type="range" id="arc-speed" class="range-input" min="0.3" max="3" step="0.1" value="1" />
+            <span class="speed-lbl">Fast</span>
+          </div>
+        </div>
       </section>
+
+      <div class="divider"></div>
 
       <!-- Ring -->
       <section class="panel">
-        <label class="panel-label switch-row">
-          <span>Show pulse ring</span>
-          <span class="switch">
-            <input type="checkbox" id="ring-toggle" checked />
-            <span class="slider"></span>
-          </span>
+        <label class="panel-label">Pulse ring</label>
+        <label class="switch-row">
+          <span>Show ring</span>
+          <span class="switch"><input type="checkbox" id="ring-toggle" checked /><span class="slider"></span></span>
+        </label>
+        <div class="ring-mode-row">
+          <span class="ring-mode-lbl">Ring color</span>
+          <div class="seg-ctrl">
+            <button class="seg-btn active" data-mode="lighter">Lighter</button>
+            <button class="seg-btn" data-mode="match">Match</button>
+            <button class="seg-btn" data-mode="darker">Darker</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- Display -->
+      <section class="panel">
+        <label class="panel-label">Display</label>
+        <label class="switch-row">
+          <span>Country names</span>
+          <span class="switch"><input type="checkbox" id="names-toggle" checked /><span class="slider"></span></span>
         </label>
       </section>
 
+      <div class="divider"></div>
+
       <!-- Actions -->
-      <section class="panel actions">
-        <button class="btn ghost" id="clear-selected">Clear selected</button>
-        <button class="btn danger" id="clear-all">Clear all</button>
+      <section class="panel">
+        <label class="panel-label">Actions</label>
+        <div class="btn-row">
+          <button class="btn grow ghost" id="clear-selected">Clear selected</button>
+          <button class="btn grow danger" id="clear-all">Clear all</button>
+        </div>
       </section>
 
       <!-- Map controls -->
@@ -101,19 +166,24 @@
         <div class="btn-row">
           <button class="btn small" id="zoom-in">＋</button>
           <button class="btn small" id="zoom-out">−</button>
-          <button class="btn small" id="zoom-reset">⤾</button>
-          <button class="btn small grow" id="present-toggle">Presentation mode</button>
+          <button class="btn small" id="zoom-reset" title="Reset zoom">⤾</button>
+          <button class="btn small grow" id="present-toggle">Present</button>
         </div>
       </section>
+
+      <div class="divider"></div>
 
       <!-- Export -->
       <section class="panel">
         <label class="panel-label">Export</label>
-        <button class="btn grow" id="export-png">Download PNG</button>
-        <button class="btn grow accent" id="export-animation">Export Animation (.webm)</button>
+        <button class="btn grow" id="export-png">PNG (static)</button>
+        <button class="btn grow accent-webm" id="export-animation">WebM (animation)</button>
+        <button class="btn grow accent-gif" id="export-gif">GIF (animation)</button>
+        <p class="panel-hint">GIF = ~3s loop, 15fps. May take a moment to encode.</p>
       </section>
 
-      <a href="index.html" class="back-link">← Back to portfolio</a>
+      <a href="index.html" class="back-link">← Portfolio</a>
+
     </aside>
 
     <!-- ===== Map ===== -->
@@ -123,8 +193,7 @@
         <div class="blob blob-b"></div>
       </div>
       <svg id="map" xmlns="http://www.w3.org/2000/svg"></svg>
-
-      <button class="exit-present" id="exit-present" aria-label="Exit presentation">×</button>
+      <button class="exit-present" id="exit-present">×</button>
       <div class="hint" id="hint">Loading map…</div>
     </main>
   </div>
@@ -136,6 +205,7 @@
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://unpkg.com/topojson-client@3"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
   <script src="map.js"></script>
 </body>
 </html>
