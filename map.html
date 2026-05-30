@@ -11,31 +11,29 @@
 </head>
 <body>
   <div id="app">
-    <!-- Toolbar -->
-    <aside class="toolbar" id="toolbar">
+
+    <!-- ===== Toolbar ===== -->
+    <aside class="toolbar">
       <div class="toolbar-header">
         <h1>World Map</h1>
         <p class="toolbar-sub">Click a country to mark it</p>
       </div>
 
+      <!-- Selected -->
       <section class="panel">
-        <label class="panel-label">Selected</label>
+        <label class="panel-label">Selected country</label>
         <div class="selected-country" id="selected-country">— none —</div>
       </section>
 
+      <!-- Label text -->
       <section class="panel">
         <label class="panel-label">Label text</label>
-        <input
-          type="text"
-          id="label-input"
-          class="text-input"
-          placeholder="Type a label…"
-          maxlength="60"
-          disabled
-        />
-        <p class="panel-hint">Double-click a label on the map to edit it directly.</p>
+        <input type="text" id="label-input" class="text-input"
+               placeholder="Type a label…" maxlength="60" disabled />
+        <p class="panel-hint">Double-click a label on the map to edit directly.</p>
       </section>
 
+      <!-- Fill color -->
       <section class="panel">
         <label class="panel-label">Fill color</label>
         <div class="color-grid" id="color-grid">
@@ -51,6 +49,36 @@
         <input type="color" id="custom-color" class="custom-color" value="#a855f7" />
       </section>
 
+      <!-- Background color -->
+      <section class="panel">
+        <label class="panel-label">Map background</label>
+        <div class="bg-options">
+          <button class="bg-btn active" data-bg="#0a0a0f">Dark</button>
+          <button class="bg-btn" data-bg="#0d1b2a">Navy</button>
+          <button class="bg-btn" data-bg="#1a1a1a">Charcoal</button>
+          <button class="bg-btn" data-bg="#f0f0f0">Light</button>
+          <button class="bg-btn transparent-btn" data-bg="transparent">Transparent</button>
+        </div>
+        <input type="color" id="bg-color" class="custom-color" value="#0a0a0f" />
+      </section>
+
+      <!-- Arc lines -->
+      <section class="panel">
+        <label class="panel-label">Arc lines — origin country</label>
+        <div class="hub-row">
+          <div class="selected-country hub-display" id="hub-country">Thailand</div>
+          <button class="btn small" id="set-hub" disabled title="Set selected country as arc origin">Set hub</button>
+        </div>
+        <label class="panel-label switch-row" style="margin-top:6px">
+          <span>Show arc lines</span>
+          <span class="switch">
+            <input type="checkbox" id="lines-toggle" checked />
+            <span class="slider"></span>
+          </span>
+        </label>
+      </section>
+
+      <!-- Ring -->
       <section class="panel">
         <label class="panel-label switch-row">
           <span>Show pulse ring</span>
@@ -61,46 +89,47 @@
         </label>
       </section>
 
+      <!-- Actions -->
       <section class="panel actions">
         <button class="btn ghost" id="clear-selected">Clear selected</button>
         <button class="btn danger" id="clear-all">Clear all</button>
       </section>
 
+      <!-- Map controls -->
       <section class="panel">
         <label class="panel-label">Map</label>
         <div class="btn-row">
           <button class="btn small" id="zoom-in">＋</button>
           <button class="btn small" id="zoom-out">−</button>
           <button class="btn small" id="zoom-reset">⤾</button>
-        </div>
-        <div class="btn-row" style="margin-top:8px">
           <button class="btn small grow" id="present-toggle">Presentation mode</button>
         </div>
       </section>
 
+      <!-- Export -->
       <section class="panel">
         <label class="panel-label">Export</label>
         <button class="btn grow" id="export-png">Download PNG</button>
+        <button class="btn grow accent" id="export-animation">Export Animation (.webm)</button>
       </section>
 
       <a href="index.html" class="back-link">← Back to portfolio</a>
     </aside>
 
-    <!-- Map area -->
+    <!-- ===== Map ===== -->
     <main class="map-area">
-      <div class="map-bg">
+      <div class="ambient-bg">
         <div class="blob blob-a"></div>
         <div class="blob blob-b"></div>
       </div>
       <svg id="map" xmlns="http://www.w3.org/2000/svg"></svg>
 
       <button class="exit-present" id="exit-present" aria-label="Exit presentation">×</button>
-
       <div class="hint" id="hint">Loading map…</div>
     </main>
   </div>
 
-  <!-- Inline editor for labels -->
+  <!-- Inline label editor -->
   <div class="label-editor" id="label-editor" hidden>
     <input type="text" id="label-editor-input" maxlength="60" />
   </div>
